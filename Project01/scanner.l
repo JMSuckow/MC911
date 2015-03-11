@@ -14,7 +14,7 @@ ANY_CHAR .
 {WHITESPACE} /* ignore */ ;
 
 "$"			{return '$';}
-"\"			{return '\';}
+"\\"			{return '\\';}
 "{"			{return '{';}
 "}"			{return '}';}
 "documentclass"		{return T_DOCUMENTCLASS;}

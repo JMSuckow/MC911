@@ -44,7 +44,14 @@ char** split (char* s, char* c, int* n);
  
 %%
 
+stmt_list: 	stmt_list stmt 
+	 |	stmt 
+;
 
+stmt:
+	
+
+;
  
 %%
 
