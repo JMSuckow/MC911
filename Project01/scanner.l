@@ -5,7 +5,7 @@
 STRING [!"#%&'()*+-./:;<=>?@_a-z0-9]+
 TABSPACE [\r\t]+
 WHITESPACE [ ]+
-BREAK_LINE [\n]+
+BREAK_LINE [\n]
 DOLLAR \\$
 ANY_CHAR .
 
@@ -49,11 +49,7 @@ ANY_CHAR .
 	return T_WHITESPACE;
 }
 
-{BREAK_LINE} {	
-	yylval.str = (char *) strdup(yytext);
-	return T_BREAKLINE;
-}
-
+{BREAK_LINE} {return T_BREAKLINE;}
 
 {STRING} {	
 	yylval.str = (char *) strdup(yytext);

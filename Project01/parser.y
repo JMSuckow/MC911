@@ -21,7 +21,7 @@ void textBold(char* text);
 void textItalic(char* text);
 void insertImage(char* imageName);
 void newTitle(char* t);
-void printList(char* list);
+void print(char* string);
 
 char* title;
 char* filename = "Tests/out.html";
@@ -58,7 +58,7 @@ int body_status = NSTARTED;
 %token T_DOLLARMATH
 %token <str> T_DOLLAR
 %token <str> T_WHITESPACE
-%token <str> T_BREAKLINE
+%token T_BREAKLINE
 
 
 %type <str> string_text aditional_string item_list bibitem_list bibitem option_item_list blank itemize
@@ -75,9 +75,9 @@ text_list: 	text_list text
 
 text: ignore
 		| command
-		| T_DOLLARMATH string_text T_DOLLARMATH
-		| T_BREAKLINE string_text
-		| T_BREAKLINE
+		| T_DOLLARMATH string_text T_DOLLARMATH {print(concat(3, "<span class=\"tex2jax_process\">$", $2, "</span>"));}
+		| string_text T_BREAKLINE {print(concat(2, $1," "));}
+		| T_BREAKLINE {if(doc_status!=FINISHED)print("<br/>");}
 
 ;
  
@@ -88,7 +88,7 @@ string_text: aditional_string { $$ = $1; }
 
 aditional_string: T_DOLLAR { $$ = $1; }
 		| T_WHITESPACE { $$ = $1; }
-		| T_STRING { $$ = $1; }
+		| T_STRING {  $$ = $1; }
 
 
 ignore: T_DOCUMENTCLASS '[' string_text ']' '{' string_text '}'
@@ -105,7 +105,7 @@ ignore: T_DOCUMENTCLASS '[' string_text ']' '{' string_text '}'
 command: T_TITLE '{' string_text '}' {	newTitle($3);}
 		| T_BEGIN '{' T_DOCUMENT '}'	{ startDocument(); }
 		| T_END '{' T_DOCUMENT '}'		{ endDocument(); }
-		| itemize {printList($1);}
+		| itemize {print($1);}
 		| T_BEGIN '{' T_THEBIBLIOGRAPHY '}' bibitem_list T_END '{' T_BIBITEM '}'
 		| T_MAKETITLE { makeTitle(); }
 		| T_TEXTBF '{' string_text '}' { textBold($3); }
@@ -115,26 +115,22 @@ command: T_TITLE '{' string_text '}' {	newTitle($3);}
 ;
 
 itemize: T_BEGIN '{' T_ITEMIZE '}' item_list T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
-	| T_BEGIN '{' T_ITEMIZE '}' item_list  T_BREAKLINE T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
-	| T_BEGIN '{' T_ITEMIZE '}' item_list  T_BREAKLINE blank T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
+	| T_BEGIN '{' T_ITEMIZE '}' item_list  blank T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
 ;
 
 item_list: item_list option_item_list { $$ = concat(2, $1, $2); }
-		| item_list T_BREAKLINE option_item_list { $$ = concat(2, $1, $3); }
-		| item_list T_BREAKLINE blank option_item_list { $$ = concat(2, $1, $4); }
+		| item_list blank option_item_list { $$ = concat(2, $1, $3); }
 		| option_item_list { $$ = $1; }
-		| T_BREAKLINE option_item_list { $$ = $2; }
-		| T_BREAKLINE blank option_item_list { $$ = $3; }
+		| blank option_item_list { $$ = $2;}
 		| item_list itemize { $$ = concat(2, $1, $2); }
-		| item_list T_BREAKLINE itemize { $$ = concat(2, $1, $3); }
-		| item_list T_BREAKLINE blank itemize { $$ = concat(2, $1, $4); }
+		| item_list blank itemize { $$ = concat(2, $1, $3); }
 ;
 
-blank: T_WHITESPACE blank
-		| T_WHITESPACE
+blank:	T_BREAKLINE T_WHITESPACE {$$ = $2;}
+		| T_BREAKLINE {$$ = "";}
 ;
 
-option_item_list: T_ITEM string_text { $$ = concat(3, "\n<li>", $2, "</li>\n"); }
+option_item_list: T_ITEM string_text { $$ = concat(3, "\n<li>", $2, "</li>"); }
 ;
 
 bibitem_list: bibitem_list bibitem { $$ = concat(3, $1, "\n", $2); }
@@ -235,10 +231,10 @@ void insertImage(char* imageName){
 		fclose(F);
 }
 
-void printList(char* list){
+void print(char* string){
 	startBody();
 	FILE *F = fopen(filename, "a"); 
-	fprintf(F, "%s", list);
+	fprintf(F, "%s", string);
 	fclose(F);
 }
 
