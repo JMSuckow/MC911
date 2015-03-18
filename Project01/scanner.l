@@ -2,7 +2,7 @@
 #include "parser.h"
 %}
 
-STRING [!"#%&'()*+-./:;<=>?@_a-z0-9]+
+STRING [!"#%&'()*+-./\\:;<=>?@_a-z0-9]+
 TABSPACE [\r\t]+
 WHITESPACE [ ]+
 BREAK_LINE [\n]
