@@ -2,7 +2,7 @@
 #include "parser.h"
 %}
 
-STRING [a-z][a-z0-9_]*
+STRING [!"#%&'()*+-./:;<=>?@_a-z0-9]+
 TABSPACE [\r\t]+
 WHITESPACE [ ]+
 BREAK_LINE [\n]+
@@ -19,6 +19,8 @@ ANY_CHAR .
 "\\"			{return '\\';}
 "{"			{return '{';}
 "}"			{return '}';}
+"["			{return '[';}
+"]"			{return ']';}
 "\\documentclass"		{return T_DOCUMENTCLASS;}
 "\\usepackage"		{return T_USEPACKAGE;}
 "\\title"			{return T_TITLE;}
