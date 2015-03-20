@@ -62,7 +62,7 @@ int body_status = NSTARTED;
 %token T_BREAKLINE
 
 
-%type <str> string_text aditional_string item_list bibitem_list bibitem option_item_list blank itemize bibitemize 
+%type <str> string_text aditional_string item_list bibitem_list bibitem option_item_list blank itemize bibitemize formatted_text
 
 %start text_list
 
@@ -117,6 +117,10 @@ command: T_TITLE '{' string_text '}' {	newTitle($3);}
 		| T_INCLUDEGRAPHICS '{' T_STRING '}' { insertImage($3); }
 ;
 
+formatted_text: formatted_text string_text T_BREAKLINE  {$$ = concat(3, $1, " ",$2);}
+				| string_text T_BREAKLINE {$$ = $1;}
+;
+
 itemize: T_BEGIN '{' T_ITEMIZE '}' item_list T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
 	| T_BEGIN '{' T_ITEMIZE '}' item_list  blank T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
 ;
@@ -133,8 +137,8 @@ blank:	T_BREAKLINE T_WHITESPACE {$$ = $2;}
 		| T_BREAKLINE {$$ = "";}
 ;				
 
-option_item_list: T_ITEM string_text { $$ = concat(3, "\n<li>", $2, "</li>"); }
-					| T_ITEM '[' string_text ']' string_text { $$ = concat(5, "\n<table cellspacing=10><tr><td align=\"center\">", $3,"</td><td align=\"center\">", $5,"</td></tr></table>"); }
+option_item_list: T_ITEM formatted_text { $$ = concat(3, "\n<li>", $2, "</li>"); }
+					| T_ITEM '[' string_text ']' formatted_text { $$ = concat(5, "\n<table cellspacing=10><tr><td align=\"center\">", $3,"</td><td align=\"center\">", $5,"</td></tr></table>"); }
 ;
 
 bibitemize:  T_BEGIN '{' T_THEBIBLIOGRAPHY '}' bibitem_list T_END '{' T_THEBIBLIOGRAPHY '}' {printReferencias(concat(3, "\n<ul>",$5,"</ul>"));}
@@ -148,7 +152,7 @@ bibitem_list: bibitem_list bibitem { $$ = concat(2, $1, $2); }
 		| blank bibitem { $$ = $2;}
 ;
 
-bibitem: T_BIBITEM '{' T_STRING '}' string_text  { $$ = concat(7, "\n<a name=\"", $3 ,"\"><table cellspacing=10><tr><td align=\"center\">", $3,"</td><td align=\"center\">", $5,"</td></tr></table></a>"); }
+bibitem: T_BIBITEM '{' T_STRING '}' formatted_text { $$ = concat(7, "\n<a name=\"", $3 ,"\"><table cellspacing=10><tr><td align=\"center\">", $3,"</td><td align=\"center\">", $5,"</td></tr></table></a>"); }
 ; 
 %%
 
