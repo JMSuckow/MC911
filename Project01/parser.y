@@ -261,6 +261,7 @@ void startDocument(){
 		fclose(F);
 		doc_status = STARTED;	
 		head_status = STARTED;
+		body_status = NSTARTED;
 	}
 
 }
@@ -289,12 +290,15 @@ void makeTitle(){
 void startBody(){
 
 	if(body_status == NSTARTED){
-		FILE *F = fopen(filename, "a"); 
-		fprintf(F, "\n<body  class=\"tex2jax_ignore\">");
+		FILE *F = fopen(filename, "a");
+		if(head_status != FINISHED){
+			fprintf(F, "\n</head>");
+			head_status = FINISHED;
+		}
+		fprintf(F, "\n<body class=\"tex2jax_ignore\">\n");
 		fclose(F);
 		body_status = STARTED;	
 	}
-
 }
 
 void endDocument(){
