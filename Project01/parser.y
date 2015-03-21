@@ -23,6 +23,9 @@ void insertImage(char* imageName);
 void newTitle(char* t);
 void print(char* string);
 void printReferencias(char* ref);
+void add_cite(char* ref);
+void change_cite(char* ref);
+
 
 char* title;
 char* filename = "Tests/out.html";
@@ -30,6 +33,17 @@ int doc_status = NSTARTED;
 int head_status = NSTARTED;
 int bib_status = NSTARTED;
 int body_status = NSTARTED;
+int ref_count = 0;
+
+int cite_count = 0;
+
+typedef struct Cite{
+	char* ref;
+	int id;
+	struct Cite *prox;
+} cite;
+
+cite *c = 0;
 
 %}
  
@@ -80,7 +94,10 @@ text: ignore
 		| string_text T_DOLLARMATH string_text T_DOLLARMATH {print(concat(4, $1, " <span class=\"tex2jax_process\">$", $3, "$</span>"));}
 		| T_DOLLARMATH string_text T_DOLLARMATH {print(concat(3, " <span class=\"tex2jax_process\">$", $2, "$</span>"));}
 		| string_text T_BREAKLINE {print(concat(2, $1," "));}
-		| string_text T_CITE '{' T_STRING '}' {print(concat(5, " <a href=\"#", $4, "\">", $4, "</a>"));}
+		| string_text T_CITE '{' T_STRING '}' {add_cite($4);
+															char id[3];
+															sprintf(id, "%d", cite_count);
+															print(concat(7, " <a href=\"#", $4, "\" id=\"",id,"\">", $4, "</a>"));}
 		| T_BREAKLINE {if(doc_status!=FINISHED)print("<br/>");}
 
 ;
@@ -153,9 +170,74 @@ bibitem_list: bibitem_list bibitem { $$ = concat(2, $1, $2); }
 		| blank bibitem { $$ = $2;}
 ;
 
-bibitem: T_BIBITEM '{' T_STRING '}' formatted_text { $$ = concat(7, "\n<a name=\"", $3 ,"\"><table cellspacing=10><tr><td align=\"center\">", $3,"</td><td align=\"center\">", $5,"</td></tr></table></a>"); }
+bibitem: T_BIBITEM '{' T_STRING '}' formatted_text {
+char str[3];
+sprintf(str, "%d", ++ref_count);
+change_cite($3);
+$$ = concat(9, "\n<a name=\"", $3 ,"\"><table cellspacing=10><tr><td align=\"center\">[",str,"]</td><td align=\"center\">", $3,"</td><td align=\"center\">", $5,"</td></tr></table></a>"); }
 ; 
 %%
+
+void free_cite(){
+
+	cite* p = c->prox;
+	cite* p2;
+	
+	while(p!=NULL){
+	
+		free(p->ref);
+		p2 = p->prox;
+		free(p);
+		
+		p = p2;
+	}
+	
+	free(c);
+
+}
+
+void change_cite(char* ref){
+
+	cite* p = c->prox;
+	
+	print("\n<script>");
+	
+	while(p!=NULL && p->ref!=NULL){
+		if(strcmp(p->ref, ref) == 0){
+		
+			char id[5];
+			sprintf(id, "%d", p->id);
+			
+			char refc[5];
+			sprintf(refc, "%d", ref_count);
+			print(concat(5,"document.getElementById(\"",id, "\").innerHTML = \"[", refc,"]\";\n"));
+			
+		}
+
+		p = p->prox;
+
+	}
+	
+	print("</script>\n");
+
+	
+
+}
+
+void add_cite(char* ref){
+
+	if(c == NULL)
+		c = (cite*) malloc(sizeof(cite));
+	
+	cite* new_cite = (cite*) malloc(sizeof(cite));
+	
+	new_cite->ref = (char*) malloc(sizeof(char)*strlen(ref)+1) ;
+	strcpy(new_cite->ref, ref);
+	new_cite->id = ++cite_count;
+	new_cite->prox = c->prox;
+	c->prox = new_cite;
+
+}
 
 void printReferencias(char* ref){
 
