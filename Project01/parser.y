@@ -84,6 +84,11 @@ text: ignore
 		| T_BREAKLINE {if(doc_status!=FINISHED)print("<br/>");}
 
 ;
+
+formatted_text:  string_text T_BREAKLINE formatted_text {$$ = concat(3, $1, " ",$3);}
+					| string_text {$$ = $1;}
+					| string_text T_BREAKLINE {$$ = $1;}
+;
  
 string_text: aditional_string { $$ = $1; }
 		| string_text aditional_string { $$ = concat(2, $1, $2); }
@@ -117,10 +122,6 @@ command: T_TITLE '{' string_text '}' {	newTitle($3);}
 		| T_INCLUDEGRAPHICS '{' T_STRING '}' { insertImage($3); }
 ;
 
-formatted_text: formatted_text string_text T_BREAKLINE  {$$ = concat(3, $1, " ",$2);}
-				| string_text T_BREAKLINE {$$ = $1;}
-;
-
 itemize: T_BEGIN '{' T_ITEMIZE '}' item_list T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
 	| T_BEGIN '{' T_ITEMIZE '}' item_list  blank T_END '{' T_ITEMIZE '}' {$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
 ;
@@ -129,12 +130,13 @@ item_list: item_list option_item_list { $$ = concat(2, $1, $2); }
 		| item_list blank option_item_list { $$ = concat(2, $1, $3); }
 		| option_item_list { $$ = $1; }
 		| blank option_item_list { $$ = $2;}
+		| T_WHITESPACE option_item_list { $$ = $2;}
 		| item_list itemize { $$ = concat(2, $1, $2); }
 		| item_list blank itemize { $$ = concat(2, $1, $3); }
 ;
 
 blank:	T_BREAKLINE T_WHITESPACE {$$ = $2;}
-		| T_BREAKLINE {$$ = "";}
+		| T_BREAKLINE {$$ = "";} 
 ;				
 
 option_item_list: T_ITEM formatted_text { $$ = concat(3, "\n<li>", $2, "</li>"); }
@@ -142,7 +144,6 @@ option_item_list: T_ITEM formatted_text { $$ = concat(3, "\n<li>", $2, "</li>");
 ;
 
 bibitemize:  T_BEGIN '{' T_THEBIBLIOGRAPHY '}' bibitem_list T_END '{' T_THEBIBLIOGRAPHY '}' {printReferencias(concat(3, "\n<ul>",$5,"</ul>"));}
-{$$ = concat(3, "\n<ul>", $5, "\n</ul>");}
 	| T_BEGIN '{' T_THEBIBLIOGRAPHY '}' bibitem_list blank T_END '{' T_THEBIBLIOGRAPHY '}' {printReferencias(concat(3, "\n<ul>",$5,"</ul>"));}
 ;
 
@@ -240,14 +241,14 @@ void endDocument(){
 void textBold(char* text){
 		startBody();
 		FILE *F = fopen(filename, "a"); 
-		fprintf(F, "<b>%s</b>", text);
+		fprintf(F, "<br/><b>%s</b>", text);
 		fclose(F);
 }
 
 void textItalic(char* text){
 		startBody();
 		FILE *F = fopen(filename, "a"); 
-		fprintf(F, "<i>%s</i>", text);
+		fprintf(F, "<br/><i>%s</i>", text);
 		fclose(F);
 }
 
