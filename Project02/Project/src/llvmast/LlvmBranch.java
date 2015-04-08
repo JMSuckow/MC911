@@ -1,15 +1,24 @@
 package llvmast;
 public  class LlvmBranch extends LlvmInstruction{
 
-    public LlvmBranch(LlvmLabelValue label){
+	public LlvmValue cond;
+   public LlvmLabelValue brTrue, brFalse;
 
+    public LlvmBranch(LlvmLabelValue label){
+		this.cond = null;
+		this.brTrue = label;
     }
     
     public LlvmBranch(LlvmValue cond,  LlvmLabelValue brTrue, LlvmLabelValue brFalse){
-
+		this.cond = cond;
+		this.brTrue = brTrue;
+		this.brFalse = brFalse;
     }
 
     public String toString(){
-		return null;
+    	if(this.cond == null)
+    		return "br label %" + this.brTrue.toString();
+		else
+			return "br i1 " + this.cond + ", label %" + this.brTrue + ", label %" + this.brFalse;
     }
 }

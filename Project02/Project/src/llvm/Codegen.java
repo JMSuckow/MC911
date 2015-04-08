@@ -139,6 +139,41 @@ public class Codegen extends VisitorAdapter{
 		return lhs;
 	}
 	
+	public LlvmValue visit(If n){
+		LlvmValue b = n.condition.accept(this);
+		
+		LlvmLabel thenClause = new LlvmLabel(new LlvmLabelValue("then"));
+		LlvmLabel elseClause = new LlvmLabel(new LlvmLabelValue("else"));
+		LlvmLabel endClause = new LlvmLabel(new LlvmLabelValue("end"));
+		
+		assembler.add(new LlvmBranch(b,thenClause.label,elseClause.label));
+		
+		assembler.add(thenClause);
+		LlvmValue v1 = n.thenClause.accept(this);
+		assembler.add(new LlvmBranch(endClause.label));
+
+		LlvmValue v2;
+		
+		assembler.add(elseClause);
+		if(n.elseClause != null){
+			v2 = n.elseClause.accept(this);
+		}
+		assembler.add(new LlvmBranch(endClause.label));
+		
+		assembler.add(endClause);
+		
+		return null;
+
+	}
+	
+	public LlvmValue visit(LessThan n){
+		LlvmValue v1 = n.lhs.accept(this);
+		LlvmValue v2 = n.rhs.accept(this);
+		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I1);
+		assembler.add(new LlvmIcmp(lhs,Condition.slt,LlvmPrimitiveType.I32,v1,v2));
+		return lhs;
+	}
+	
 	public LlvmValue visit(Print n){
 
 		LlvmValue v =  n.exp.accept(this);
@@ -185,12 +220,12 @@ public class Codegen extends VisitorAdapter{
 	public LlvmValue visit(IntegerType n){return null;}
 	public LlvmValue visit(IdentifierType n){return null;}
 	public LlvmValue visit(Block n){return null;}
-	public LlvmValue visit(If n){return null;}
+	//public LlvmValue visit(If n){return null;}
 	public LlvmValue visit(While n){return null;}
 	public LlvmValue visit(Assign n){return null;}
 	public LlvmValue visit(ArrayAssign n){return null;}
 	public LlvmValue visit(And n){return null;}
-	public LlvmValue visit(LessThan n){return null;}
+	//public LlvmValue visit(LessThan n){return null;}
 	public LlvmValue visit(Equal n){return null;}
 	//public LlvmValue visit(Minus n){return null;}
 	//public LlvmValue visit(Times n){return null;}
