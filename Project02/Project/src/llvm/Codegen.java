@@ -189,6 +189,13 @@ public class Codegen extends VisitorAdapter{
 		assembler.add(new LlvmAnd(lhs,LlvmPrimitiveType.I1,v1,v2));
 		return lhs;
 	}
+
+	public LlvmValue visit(Not n){
+		LlvmValue b = n.exp.accept(this);
+		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I1);
+		assembler.add(new LlvmNot(lhs,LlvmPrimitiveType.I1,b));
+		return lhs;
+	}
 	
 	public LlvmValue visit(Print n){
 
@@ -245,16 +252,16 @@ public class Codegen extends VisitorAdapter{
 	public LlvmValue visit(Equal n){return null;}
 	//public LlvmValue visit(Minus n){return null;}
 	//public LlvmValue visit(Times n){return null;}
-	public LlvmValue visit(ArrayLookup n){return null;}
-	public LlvmValue visit(ArrayLength n){return null;}
+	public LlvmValue visit(ArrayLookup n){System.out.println("ArrayLookup");return null;}
+	public LlvmValue visit(ArrayLength n){System.out.println("ArrayLength");return null;}
 	public LlvmValue visit(Call n){return null;}
 	//public LlvmValue visit(True n){return null;}
 	//public LlvmValue visit(False n){return null;}
 	public LlvmValue visit(IdentifierExp n){return null;}
 	public LlvmValue visit(This n){return null;}
-	public LlvmValue visit(NewArray n){return null;}
-	public LlvmValue visit(NewObject n){return null;}
-	public LlvmValue visit(Not n){return null;}
+	public LlvmValue visit(NewArray n){System.out.println("NewArray");return null;}
+	public LlvmValue visit(NewObject n){System.out.println("NewObject");return null;}
+	//public LlvmValue visit(Not n){return null;}
 	public LlvmValue visit(Identifier n){return null;}
 }
 
