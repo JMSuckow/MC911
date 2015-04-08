@@ -123,6 +123,14 @@ public class Codegen extends VisitorAdapter{
 		return lhs;
 	}
 	
+	public LlvmValue visit(Minus n){
+		LlvmValue v1 = n.lhs.accept(this);
+		LlvmValue v2 = n.rhs.accept(this);
+		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I32);
+		assembler.add(new LlvmMinus(lhs,LlvmPrimitiveType.I32,v1,v2));
+		return lhs;
+	}
+	
 	public LlvmValue visit(Print n){
 
 		LlvmValue v =  n.exp.accept(this);
@@ -176,7 +184,7 @@ public class Codegen extends VisitorAdapter{
 	public LlvmValue visit(And n){return null;}
 	public LlvmValue visit(LessThan n){return null;}
 	public LlvmValue visit(Equal n){return null;}
-	public LlvmValue visit(Minus n){return null;}
+	//public LlvmValue visit(Minus n){return null;}
 	public LlvmValue visit(Times n){return null;}
 	public LlvmValue visit(ArrayLookup n){return null;}
 	public LlvmValue visit(ArrayLength n){return null;}
