@@ -1,4 +1,4 @@
-// heranca entre duas classes (OK)
+// heranca entre duas classes 
 class m209
 {
     public static void main(String[] args)

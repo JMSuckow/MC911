@@ -1,4 +1,4 @@
-// herdando da classe principal (OK)
+// herdando da classe principal 
 class m211
 {
     public static void main(String[] args)

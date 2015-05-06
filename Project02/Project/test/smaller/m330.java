@@ -1,4 +1,4 @@
-// testando new array (OK)
+// testando new array 
 class m330
 {
    public static void main(String[] args)

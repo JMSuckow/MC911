@@ -1,4 +1,4 @@
-// heranca entre cinco classes (OK)
+// heranca entre cinco classes 
 class m210
 {
     public static void main(String[] args)

@@ -12,7 +12,7 @@ public  class LlvmTimes extends LlvmInstruction{
 		this.op2 = op2;
    }
 
-   public String toString(){		
-   	return "  " +lhs + " = mul " + type + " " + op1 + ", " + op2;
+   public String toString(){
+	   	return "  " +lhs + " = mul " + type + " " + op1 + ", " + op2;
    }
 }

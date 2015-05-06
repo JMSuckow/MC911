@@ -1,4 +1,4 @@
-// retorno de metodo(OK)
+// retorno de metodo
 class m306
 {
     public static void main(String[] args)

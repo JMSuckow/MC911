@@ -63,7 +63,10 @@ public class Codegen extends VisitorAdapter{
 		// codeGenerator.symTab.FillTabSymbol(p);
 		
 		// Formato da String para o System.out.printlnijava "%d\n"
-		codeGenerator.assembler.add(new LlvmConstantDeclaration("@.formatting.string", "private constant [4 x i8] c\"%d\\0A\\00\""));	
+		codeGenerator.assembler.add(new LlvmConstantDeclaration("@.formatting.string", "private constant [4 x i8] c\"%d\\0A\\00\""));
+		
+		//Formato de Array
+		codeGenerator.assembler.add(new LlvmConstantDeclaration("%type.Array", "type {i32, i32* }"));	
 
 		// NOTA: sempre que X.accept(Y), então Y.visit(X);
 		// NOTA: Logo, o comando abaixo irá chamar codeGenerator.visit(Program), linha 75
@@ -116,6 +119,7 @@ public class Codegen extends VisitorAdapter{
 	}
 	
 	public LlvmValue visit(Plus n){
+		System.out.println("Plus");
 		LlvmValue v1 = n.lhs.accept(this);
 		LlvmValue v2 = n.rhs.accept(this);
 		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I32);
@@ -124,6 +128,7 @@ public class Codegen extends VisitorAdapter{
 	}
 	
 	public LlvmValue visit(Minus n){
+		System.out.println("Minus");
 		LlvmValue v1 = n.lhs.accept(this);
 		LlvmValue v2 = n.rhs.accept(this);
 		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I32);
@@ -132,6 +137,7 @@ public class Codegen extends VisitorAdapter{
 	}
 	
 	public LlvmValue visit(Times n){
+		System.out.println("Times");
 		LlvmValue v1 = n.lhs.accept(this);
 		LlvmValue v2 = n.rhs.accept(this);
 		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I32);
@@ -140,6 +146,7 @@ public class Codegen extends VisitorAdapter{
 	}
 	
 	public LlvmValue visit(If n){
+		System.out.println("If");
 		LlvmValue b = n.condition.accept(this);
 		
 		LlvmLabel thenClause = new LlvmLabel(new LlvmLabelValue("then"));
@@ -167,14 +174,17 @@ public class Codegen extends VisitorAdapter{
 	}
 
 	public LlvmValue visit(True n){
+		System.out.println("True");
 		return new LlvmBool(LlvmBool.TRUE);
 	}
 
 	public LlvmValue visit(False n){
+		System.out.println("False");
 		return new LlvmBool(LlvmBool.FALSE);
 	}
 	
 	public LlvmValue visit(LessThan n){
+		System.out.println("LessThan");
 		LlvmValue v1 = n.lhs.accept(this);
 		LlvmValue v2 = n.rhs.accept(this);
 		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I1);
@@ -183,6 +193,7 @@ public class Codegen extends VisitorAdapter{
 	}
 
 	public LlvmValue visit(And n){
+		System.out.println("And");
 		LlvmValue v1 = n.lhs.accept(this);
 		LlvmValue v2 = n.rhs.accept(this);
 		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I1);
@@ -191,10 +202,116 @@ public class Codegen extends VisitorAdapter{
 	}
 
 	public LlvmValue visit(Not n){
+		System.out.println("Not");
 		LlvmValue b = n.exp.accept(this);
 		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I1);
 		assembler.add(new LlvmNot(lhs,LlvmPrimitiveType.I1,b));
 		return lhs;
+	}
+	
+	public LlvmValue visit(NewArray n){
+		System.out.println("NewArray");
+		
+		LlvmValue size = n.size.accept(this);
+		
+		
+		//Calculate Array type size: 12
+		LlvmRegister sizeReg = new LlvmRegister(LlvmPrimitiveType.I32);
+		assembler.add(new LlvmTimes(sizeReg,LlvmPrimitiveType.I32,new LlvmIntegerLiteral(12),new LlvmIntegerLiteral(1)));
+		//Malloc Array type size
+		LlvmRegister arrayReg = new LlvmRegister(LlvmPrimitiveType.I8P);
+		List<LlvmValue> args = new ArrayList<LlvmValue>();
+		args.add(sizeReg);
+		assembler.add(new LlvmCall(arrayReg, LlvmPrimitiveType.I8P, "@malloc", args));
+		//Bitcast array type
+		LlvmRegister array = new LlvmRegister(LlvmCustomType.ARRAYP);
+		assembler.add(new LlvmBitcast(array, arrayReg, LlvmCustomType.ARRAYP));
+		//store size
+		LlvmRegister sizePtr = new LlvmRegister(LlvmPrimitiveType.I32P);
+		List<LlvmValue> offsets = new ArrayList<LlvmValue>();
+		offsets.add(new LlvmIntegerLiteral(0));
+		offsets.add(new LlvmIntegerLiteral(0));
+		assembler.add(new LlvmGetElementPointer(sizePtr, array, offsets));
+		assembler.add(new LlvmStore(size, sizePtr));		
+		//alloc array
+		LlvmRegister arrayA = new LlvmRegister(LlvmPrimitiveType.I32P);
+		List<LlvmValue> numbers = new ArrayList<LlvmValue>();
+		numbers.add(size);
+		assembler.add(new LlvmAlloca(arrayA, LlvmPrimitiveType.I32, numbers));
+		//store array
+		LlvmRegister arrayPtr = new LlvmRegister(LlvmPrimitiveType.I32PP);
+		List<LlvmValue> offsetsArray = new ArrayList<LlvmValue>();
+		offsetsArray.add(new LlvmIntegerLiteral(0));
+		offsetsArray.add(new LlvmIntegerLiteral(1));
+		assembler.add(new LlvmGetElementPointer(arrayPtr, array, offsetsArray));
+		assembler.add(new LlvmStore(arrayA, arrayPtr));
+		
+		return array;		
+	}
+	
+	public LlvmValue visit(ClassDeclSimple n){
+		System.out.println("ClassDeclSimple");
+		
+		LlvmValue name = n.name.accept(this);
+		
+		List<LlvmValue> varList = new ArrayList<LlvmValue>();
+		for (util.List<VarDecl> c = n.varList; c != null; c = c.tail){
+			varList.add(c.head.accept(this));
+		}
+		
+		List<LlvmValue> methodList = new ArrayList<LlvmValue>();
+		for (util.List<MethodDecl> c = n.methodList; c != null; c = c.tail){
+			methodList.add(c.head.accept(this));
+		}
+		
+		String s = "";
+		for(int i =0; i<varList.size(); i++){
+			LlvmValue v = varList.get(i);
+			s = s + v.type;
+			if(i+1 < varList.size())
+				s = s + ", ";
+		}
+		
+		assembler.add(new LlvmConstantDeclaration("%class."+name, "type {i32, i32* }"));
+
+		return name;
+	}
+	
+	public LlvmValue visit(VarDecl n){
+		System.out.println("VarDecl");
+		
+		return null;
+	}
+	
+	public LlvmValue visit(MethodDecl n){
+		System.out.println("MethodDecl");
+		
+		return null;
+	}
+	
+	public LlvmValue visit(Identifier n){
+		System.out.println("Identifier");
+		
+		
+		return new LlvmString(n.s);
+	}
+	
+	public LlvmValue visit(ArrayLength n){
+		System.out.println("ArrayLength");
+		
+		LlvmValue array = n.array.accept(this);
+		
+		LlvmRegister sizePtr = new LlvmRegister(LlvmPrimitiveType.I32P);
+		List<LlvmValue> offsets = new ArrayList<LlvmValue>();
+		offsets.add(new LlvmIntegerLiteral(0));
+		offsets.add(new LlvmIntegerLiteral(0));
+		assembler.add(new LlvmGetElementPointer(sizePtr, array, offsets));
+		
+		LlvmRegister size = new LlvmRegister(LlvmPrimitiveType.I32);
+		assembler.add(new LlvmLoad(size, sizePtr));
+		
+		
+		return size;
 	}
 	
 	public LlvmValue visit(Print n){
@@ -233,36 +350,36 @@ public class Codegen extends VisitorAdapter{
 	};
 	
 	// Todos os visit's que devem ser implementados	
-	public LlvmValue visit(ClassDeclSimple n){return null;}
-	public LlvmValue visit(ClassDeclExtends n){return null;}
-	public LlvmValue visit(VarDecl n){return null;}
-	public LlvmValue visit(MethodDecl n){return null;}
-	public LlvmValue visit(Formal n){return null;}
-	public LlvmValue visit(IntArrayType n){return null;}
-	public LlvmValue visit(BooleanType n){return null;}
-	public LlvmValue visit(IntegerType n){return null;}
-	public LlvmValue visit(IdentifierType n){return null;}
-	public LlvmValue visit(Block n){return null;}
+	//public LlvmValue visit(ClassDeclSimple n){System.out.println("ClassDeclSimple");return null;}
+	public LlvmValue visit(ClassDeclExtends n){System.out.println("ClassDeclExtends");return null;}
+	//public LlvmValue visit(VarDecl n){System.out.println("VarDecl");return null;}
+	//public LlvmValue visit(MethodDecl n){System.out.println("MethodDecl");return null;}
+	public LlvmValue visit(Formal n){System.out.println("Formal");return null;}
+	public LlvmValue visit(IntArrayType n){System.out.println("IntArrayType");return null;}
+	public LlvmValue visit(BooleanType n){System.out.println("BooleanType");return null;}
+	public LlvmValue visit(IntegerType n){System.out.println("IntegerType");return null;}
+	public LlvmValue visit(IdentifierType n){System.out.println("IdentifierType");return null;}
+	public LlvmValue visit(Block n){System.out.println("Block");return null;}
 	//public LlvmValue visit(If n){return null;}
-	public LlvmValue visit(While n){return null;}
-	public LlvmValue visit(Assign n){return null;}
-	public LlvmValue visit(ArrayAssign n){return null;}
+	public LlvmValue visit(While n){System.out.println("While");return null;}
+	public LlvmValue visit(Assign n){System.out.println("Assign");return null;}
+	public LlvmValue visit(ArrayAssign n){System.out.println("ArrayAssign");return null;}
 	//public LlvmValue visit(And n){return null;}
 	//public LlvmValue visit(LessThan n){return null;}
-	public LlvmValue visit(Equal n){return null;}
+	public LlvmValue visit(Equal n){System.out.println("Equal");return null;}
 	//public LlvmValue visit(Minus n){return null;}
 	//public LlvmValue visit(Times n){return null;}
 	public LlvmValue visit(ArrayLookup n){System.out.println("ArrayLookup");return null;}
-	public LlvmValue visit(ArrayLength n){System.out.println("ArrayLength");return null;}
-	public LlvmValue visit(Call n){return null;}
+	//public LlvmValue visit(ArrayLength n){System.out.println("ArrayLength");return null;}
+	public LlvmValue visit(Call n){System.out.println("Call");return null;}
 	//public LlvmValue visit(True n){return null;}
 	//public LlvmValue visit(False n){return null;}
-	public LlvmValue visit(IdentifierExp n){return null;}
-	public LlvmValue visit(This n){return null;}
-	public LlvmValue visit(NewArray n){System.out.println("NewArray");return null;}
+	public LlvmValue visit(IdentifierExp n){System.out.println("IdentifierExp");return null;}
+	public LlvmValue visit(This n){System.out.println("this");return null;}
+	//public LlvmValue visit(NewArray n){System.out.println("NewArray");return null;}
 	public LlvmValue visit(NewObject n){System.out.println("NewObject");return null;}
 	//public LlvmValue visit(Not n){return null;}
-	public LlvmValue visit(Identifier n){return null;}
+	//public LlvmValue visit(Identifier n){System.out.println("Identifier");return null;}
 }
 
 
