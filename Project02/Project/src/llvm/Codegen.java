@@ -272,7 +272,7 @@ public class Codegen extends VisitorAdapter{
 				s = s + ", ";
 		}
 		
-		assembler.add(new LlvmConstantDeclaration("%class."+name, "type {i32, i32* }"));
+		assembler.add(new LlvmConstantDeclaration("%class."+name, "type {" + s + "}"));
 
 		return name;
 	}
