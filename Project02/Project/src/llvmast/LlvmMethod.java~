@@ -1,0 +1,21 @@
+package llvmast;
+import java.util.*;
+
+public class LlvmMethod extends LlvmValue{
+
+	public LlvmValue name;
+	public LlvmValue returnExp;
+	public List<LlvmValue> locals;
+	public List<LlvmValue> formals;
+	public List<LlvmValue> body;
+	
+   public LlvmMethod(LlvmValue name, LlvmValue returnType, LlvmValue returnExp){
+    	this.name = name;
+    	this.type = returnType.type;
+    	this.returnExp = returnExp;
+    }
+    
+    public String toString(){
+		return name.toString();
+    }
+}

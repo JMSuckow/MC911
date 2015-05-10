@@ -1,0 +1,41 @@
+package llvmast;
+import java.util.*;
+
+public class LlvmClassDecl extends LlvmInstruction{
+	public List<LlvmValue> variables;
+	public List<LlvmValue> methods;
+	public LlvmValue name;
+	
+    public LlvmClassDecl(LlvmValue name, List<LlvmValue> variables, List<LlvmValue> methods){
+    	this.variables = variables;
+    	this.methods = methods;
+    	this.name = name;
+    }
+    
+    /*public String toString(){
+    
+    	String s = "";
+    	String returnString = "";
+    	
+		/*for(int i =0; i<variables.size(); i++){
+			LlvmVariable v = (LlvmVariable) variables.get(i);
+			s = s + v.type;
+			if(i+1 < variables.size())
+				s = s + ", ";
+		}
+		
+		returnString += "%class."+name + " = type {" + s + "}";
+		
+		s="";
+		for(int i =0; i<methods.size(); i++){
+			LlvmMethod m = (LlvmMethod) methods.get(i);
+			s = s + m.type + " " + m.returnExp + " " + m.name;
+			if(i+1 < methods.size())
+				s = s + ", ";
+		}
+		
+		returnString += "\n" + s;
+		
+		return returnString;
+    }*/
+}

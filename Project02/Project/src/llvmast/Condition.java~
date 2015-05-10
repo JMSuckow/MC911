@@ -1,0 +1,6 @@
+package llvmast;
+public enum Condition{
+	EQ, NE, UGT, UGE, ULT, ULE, SGT, SGE, SLT, SLE;	
+
+}
+

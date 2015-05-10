@@ -1,0 +1,9 @@
+package llvmast;
+public class LlvmCustomType extends LlvmType{
+    public static final LlvmType ARRAY         = new LlvmPrimitiveType();
+
+    public String toString(){
+	if(this == ARRAY) return "%type.Array";
+	return null;
+    }
+}

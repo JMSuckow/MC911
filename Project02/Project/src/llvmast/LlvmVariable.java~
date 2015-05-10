@@ -1,0 +1,15 @@
+package llvmast;
+
+public class LlvmVariable extends LlvmValue{
+
+	public LlvmValue name;
+	
+    public LlvmVariable(LlvmValue name, LlvmValue type){
+    	this.name = name;
+    	this.type = type.type;
+    }
+    
+    public String toString(){
+		return name;
+    }
+}

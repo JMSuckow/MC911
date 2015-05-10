@@ -1,0 +1,11 @@
+// testando operador < (OK)
+class m318
+{
+   public static void main(String[] args)
+   {
+       if ( 30 < 20 )
+          System.out.println(1);
+       else
+       	System.out.println(2);
+   }
+}

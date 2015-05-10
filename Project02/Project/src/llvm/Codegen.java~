@@ -300,7 +300,7 @@ public class Codegen extends VisitorAdapter{
 		LlvmValue returnExp = n.returnExp.accept(this);
 		
 		List<LlvmValue> formals = new ArrayList<LlvmValue>();
-		formals.add(new LlvmString("%class."+currentClass.name+"* %this"));
+		formals.add(new String("%class."+currentClass.name+"* %this"));
 		for (util.List<Formal> c = n.formals; c != null; c = c.tail){
 			formals.add(c.head.accept(this));
 		}
