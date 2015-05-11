@@ -4,26 +4,22 @@ define i32 @main() {
 entry:
   %tmp0 = alloca i32
   store i32 0, i32 * %tmp0
-  %tmp1 = getelementptr [4 x i8] * @.formatting.string, i32 0, i32 0
-  %tmp2 = call i32 (i8 *, ...)* @printf(i8 * %tmp1, i32 0)
-  %tmp3 = load i32 * %tmp0
-  ret i32 %tmp3
+  %tmp1 = mul i32 12, 1
+  %tmp2 = call i8*  @malloc(i32 %tmp1)
+  %tmp3 = bitcast i8* %tmp2 to %class.a* 
+  %tmp4 = call i32  @_i__a(%class.a*  %tmp3)
+  %tmp5 = getelementptr [4 x i8] * @.formatting.string, i32 0, i32 0
+  %tmp6 = call i32 (i8 *, ...)* @printf(i8 * %tmp5, i32
+  ret i32 %tmp7
 }
-%class.a = type {i32*}
-define i32 @_i__a(%class.a* %this, i32 %a) {
+%class.a = type {}
+define %class.a*  @_A__a(%class.a*  %this) {
+entry_A__a:
+  ret %class.a*  %this
+}
+define i32 @_i__a(%class.a*  %this) {
 entry_i__a:
-  %a_i_a_tmp = alloca i32
-  store i32 %a, i32 * %a_i_a_tmp
-  %tmp4 = mul i32 12, 1
-  %tmp5 = call i8*  @malloc(i32 %tmp4)
-  %tmp6 = bitcast i8* %tmp5 to %type.Array*
-  %tmp7 = getelementptr %type.Array* %tmp6, i32 0, i32 0
-  store i32 10, i32* %tmp7
-  %tmp8 = alloca i32, i32 10
-  %tmp9 = getelementptr %type.Array* %tmp6, i32 0, i32 1
-  store i32* %tmp8, i32** %tmp9
-  %teste = load %type.Array* %tmp6
-  ret %teste;
+  ret i32 0
 }
 declare i32 @printf (i8 *, ...)
 declare i8 * @malloc (i32)

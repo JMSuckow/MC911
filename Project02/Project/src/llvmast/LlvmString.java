@@ -4,7 +4,21 @@ public class LlvmString extends LlvmValue{
 	
     public LlvmString(String s){
     	this.s = s;
-    	this.type = LlvmCustomType.CUSTOM_CLASS;
+    	LlvmCustomType ty = LlvmCustomType.CUSTOM_CLASS;
+    	ty.setString(s);
+    	this.type = ty;
+    }
+    
+    public LlvmString(String s, String t){
+    	this.s = s;
+    	LlvmCustomType ty = LlvmCustomType.CUSTOM_CLASS;
+    	ty.setString(t);
+    	this.type = ty;
+    }
+    
+    public LlvmString(String s, LlvmType t){
+    	this.type = t;
+    	this.s = s;
     }
     
     public LlvmString(LlvmType t){

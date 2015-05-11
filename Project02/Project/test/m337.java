@@ -1,5 +1,5 @@
-// testando this - (OK)
-class m336
+// testando this (erro)
+class m337
 {
    public static void main(String[] args)
    {
@@ -9,6 +9,6 @@ class m336
 
 class a
 {
-   public a A(){return this;}
+   public a A(){return this.A();}
    public int i(){ return 0; }
 }

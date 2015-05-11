@@ -14,7 +14,10 @@ public class LlvmDefine extends LlvmInstruction{
     public String toString(){
 	String arguments = "";
 	for(int i = 0; i<args.size(); i++){
-	    arguments = arguments + args.get(i).type + " %" + args.get(i);
+		if(args.get(i).type != LlvmCustomType.CUSTOM_CLASS)
+	   	 arguments = arguments + args.get(i).type + " %" + args.get(i);
+		/*else
+			arguments += args.get(i);*/
 	    if(i+1<args.size()) 
 		arguments = arguments + ", ";
 	    

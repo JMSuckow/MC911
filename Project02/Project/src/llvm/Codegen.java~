@@ -48,7 +48,9 @@ public class Codegen extends VisitorAdapter{
   	private SymTab symTab;
 	private ClassNode classEnv; 	// Aponta para a classe atualmente em uso em symTab
 	private MethodNode methodEnv; 	// Aponta para a metodo atualmente em uso em symTab
+	
 	private ClassDecl currentClass;
+	private MethodDecl currentMethod;
 
 
 	public Codegen(){
@@ -265,7 +267,10 @@ public class Codegen extends VisitorAdapter{
 		String s = "";
 		for(int i =0; i<varList.size(); i++){
 			LlvmVariable v = (LlvmVariable) varList.get(i);
-			s = s + v.type;
+			if(v.type == LlvmCustomType.CUSTOM_CLASS)
+				s = s + "%class."+v.type+"*";
+			else
+				s = s + v.type;
 			if(i+1 < varList.size())
 				s = s + ", ";
 		}
@@ -275,8 +280,11 @@ public class Codegen extends VisitorAdapter{
 		
 		List<LlvmValue> methodList = new ArrayList<LlvmValue>();
 		for (util.List<MethodDecl> c = n.methodList; c != null; c = c.tail){
+			currentMethod = c.head;
 			methodList.add(c.head.accept(this));
 		}
+		currentMethod = null;
+		
 		
 		//assembler.add(new LlvmClassDecl(name,varList,methodList));
 
@@ -300,7 +308,7 @@ public class Codegen extends VisitorAdapter{
 		LlvmValue returnExp = n.returnExp.accept(this);
 		
 		List<LlvmValue> formals = new ArrayList<LlvmValue>();
-		formals.add(new LlvmString("%class."+currentClass.name+"* %this"));
+		formals.add(new LlvmString("this","%class."+currentClass.name+"* "));
 		for (util.List<Formal> c = n.formals; c != null; c = c.tail){
 			formals.add(c.head.accept(this));
 		}
@@ -341,7 +349,7 @@ public class Codegen extends VisitorAdapter{
 		
 		//Return
 		
-		System.out.println(returnExp);
+		//System.out.println(returnExp);
 		
 		assembler.add(new LlvmRet(returnExp));
 		assembler.add(new LlvmCloseDefinition());
@@ -414,7 +422,7 @@ public class Codegen extends VisitorAdapter{
 	public LlvmValue visit(IdentifierType n){
 		System.out.println("IdentifierType");
 		
-		return null;
+		return new LlvmString(n.name);
 	}
 	
 	public LlvmValue visit(ArrayLength n){
@@ -442,19 +450,38 @@ public class Codegen extends VisitorAdapter{
 		LlvmValue method = n.method.accept(this);
 		
 		List<LlvmValue> actuals = new ArrayList<LlvmValue>();
+		actuals.add(object);
 		for (util.List<Exp> c = n.actuals; c != null; c = c.tail){
 			actuals.add(c.head.accept(this));
 		}
 		
+		LlvmRegister retValue = new LlvmRegister(object.type);
+		assembler.add(new LlvmCall(retValue, retValue.type, "@_"+method+"__"/*+object.className*/, actuals));
 		
 		
-		return null;
+		return retValue;
 	}
 	
 	public LlvmValue visit(NewObject n){
 		System.out.println("NewObject");
 		
-		return null;
+		LlvmValue className = n.className.accept(this);
+		
+		//TODO: Size of classes
+		
+		//Calculate Array type size: 12
+		LlvmRegister sizeReg = new LlvmRegister(LlvmPrimitiveType.I32);
+		assembler.add(new LlvmTimes(sizeReg,LlvmPrimitiveType.I32,new LlvmIntegerLiteral(12),new LlvmIntegerLiteral(1)));
+		//Malloc Obj type size
+		LlvmRegister objReg = new LlvmRegister(LlvmPrimitiveType.I8P);
+		List<LlvmValue> args = new ArrayList<LlvmValue>();
+		args.add(sizeReg);
+		assembler.add(new LlvmCall(objReg, LlvmPrimitiveType.I8P, "@malloc", args));
+		//Bitcast Obj type
+		LlvmRegister obj = new LlvmRegister(new LlvmString("%class."+className+"* ").type);
+		assembler.add(new LlvmBitcast(obj, objReg, obj.type));
+		
+		return obj;
 	}
 	
 	public LlvmValue visit(Print n){
@@ -492,6 +519,16 @@ public class Codegen extends VisitorAdapter{
 		return new LlvmIntegerLiteral(n.value);
 	};
 	
+	public LlvmValue visit(This n){
+		System.out.println("This");
+		
+		//TODO: Pegar currentMethod e verificar currentClass
+		
+		LlvmRegister thisReg = new LlvmRegister("%this", new LlvmString("%class."+currentClass.name+"* ").type);
+		
+		return thisReg;
+	}
+	
 	// Todos os visit's que devem ser implementados	
 	//public LlvmValue visit(ClassDeclSimple n){System.out.println("ClassDeclSimple");return null;}
 	public LlvmValue visit(ClassDeclExtends n){System.out.println("ClassDeclExtends");return null;}
@@ -518,7 +555,7 @@ public class Codegen extends VisitorAdapter{
 	//public LlvmValue visit(True n){return null;}
 	//public LlvmValue visit(False n){return null;}
 	public LlvmValue visit(IdentifierExp n){System.out.println("IdentifierExp");return null;}
-	public LlvmValue visit(This n){System.out.println("this");return null;}
+	//public LlvmValue visit(This n){System.out.println("This");return null;}
 	//public LlvmValue visit(NewArray n){System.out.println("NewArray");return null;}
 	//public LlvmValue visit(NewObject n){System.out.println("NewObject");return null;}
 	//public LlvmValue visit(Not n){return null;}
