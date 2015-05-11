@@ -1,6 +1,6 @@
 package llvmast;
 
-public class LlvmAssign extends LlvmValue{
+public class LlvmAssign extends LlvmInstruction{
 
 	public LlvmValue name;
 	public LlvmValue exp;

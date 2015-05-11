@@ -305,19 +305,29 @@ public class Codegen extends VisitorAdapter{
 			formals.add(c.head.accept(this));
 		}
 		
-		System.out.println("Current Class"+currentClass.name);
+		//System.out.println("Current Class"+currentClass.name);
 		
 		// definicao do main 
 		assembler.add(new LlvmDefine("@_"+name+"__"+currentClass.name, returnType.type, formals));
 		assembler.add(new LlvmLabel(new LlvmLabelValue("entry_"+name+"__"+currentClass.name)));
 		
 		//Alloc formal variables
-		
+		for(int i =1; i < formals.size(); i++){
+			LlvmRegister reg = new LlvmRegister("%" + currentClass.name + "_" + name + "_" + ((LlvmFormal)formals.get(i)).name + "_tmp",new LlvmPointer(formals.get(i).type));
+			LlvmRegister formal = new LlvmRegister("%" + ((LlvmFormal)formals.get(i)).name, formals.get(i).type);
+			assembler.add(new LlvmAlloca(reg, formals.get(i).type, new ArrayList<LlvmValue>()));
+			assembler.add(new LlvmStore(formal, reg));
+		}
 		
 		//Alloc new variables
 		List<LlvmValue> locals = new ArrayList<LlvmValue>();
 		for (util.List<VarDecl> c = n.locals; c != null; c = c.tail){
-			locals.add(c.head.accept(this));
+			locals.add(c.head.accept(this));	
+		}
+		
+		for(int i =0; i < locals.size(); i++){
+			LlvmRegister reg = new LlvmRegister("%" + currentClass.name + "_" + name + "_" + ((LlvmVariable)locals.get(i)).name + "_tmp",new LlvmPointer(locals.get(i).type));
+			assembler.add(new LlvmAlloca(reg, locals.get(i).type, new ArrayList<LlvmValue>()));
 		}
 		
 		
@@ -329,7 +339,11 @@ public class Codegen extends VisitorAdapter{
 		}
 		
 		
-		//assembler.add(new LlvmRet(R2));
+		//Return
+		
+		System.out.println(returnExp);
+		
+		assembler.add(new LlvmRet(returnExp));
 		assembler.add(new LlvmCloseDefinition());
 
 		
@@ -353,12 +367,27 @@ public class Codegen extends VisitorAdapter{
 		
 		LlvmValue var = n.var.accept(this);
 		LlvmValue exp = n.exp.accept(this);
+		
+		//TODO: Search Map of variables
+		
+		LlvmRegister reg = new LlvmRegister(LlvmPrimitiveType.I32P);
+		
+		
+		if(!(exp instanceof LlvmRegister)){
+			LlvmRegister reg2 = new LlvmRegister(LlvmPrimitiveType.I32P);
+			LlvmRegister regExp = new LlvmRegister(LlvmPrimitiveType.I32P);
+			assembler.add(new LlvmAlloca(regExp, LlvmPrimitiveType.I32, new ArrayList<LlvmValue>()));
+			assembler.add(new LlvmStore(exp, regExp));
+			assembler.add(new LlvmLoad(reg2, regExp));
+		}else{
+			assembler.add(new LlvmLoad(reg,exp));
+		}
 
-		return new LlvmAssign(var,exp);
+		return reg;
 	}
 	
 	public LlvmValue visit(Identifier n){
-		System.out.println("Identifier");
+		System.out.println("Identifier - "+ n.s);
 		
 		
 		return new LlvmString(n.s);
@@ -404,6 +433,30 @@ public class Codegen extends VisitorAdapter{
 		
 		
 		return size;
+	}
+	
+	public LlvmValue visit(Call n){
+		System.out.println("Call");
+		
+		LlvmValue object = n.object.accept(this);
+		LlvmValue method = n.method.accept(this);
+		
+		List<LlvmValue> actuals = new ArrayList<LlvmValue>();
+		for (util.List<Exp> c = n.actuals; c != null; c = c.tail){
+			actuals.add(c.head.accept(this));
+		}
+		
+		
+		
+		return null;
+	}
+	
+	public LlvmValue visit(NewObject n){
+		System.out.println("NewObject");
+		
+		LlvmValue className = n.className.accept(this);
+		
+		return null;
 	}
 	
 	public LlvmValue visit(Print n){
@@ -463,13 +516,13 @@ public class Codegen extends VisitorAdapter{
 	//public LlvmValue visit(Times n){return null;}
 	public LlvmValue visit(ArrayLookup n){System.out.println("ArrayLookup");return null;}
 	//public LlvmValue visit(ArrayLength n){System.out.println("ArrayLength");return null;}
-	public LlvmValue visit(Call n){System.out.println("Call");return null;}
+	//public LlvmValue visit(Call n){System.out.println("Call");return null;}
 	//public LlvmValue visit(True n){return null;}
 	//public LlvmValue visit(False n){return null;}
 	public LlvmValue visit(IdentifierExp n){System.out.println("IdentifierExp");return null;}
 	public LlvmValue visit(This n){System.out.println("this");return null;}
 	//public LlvmValue visit(NewArray n){System.out.println("NewArray");return null;}
-	public LlvmValue visit(NewObject n){System.out.println("NewObject");return null;}
+	//public LlvmValue visit(NewObject n){System.out.println("NewObject");return null;}
 	//public LlvmValue visit(Not n){return null;}
 	//public LlvmValue visit(Identifier n){System.out.println("Identifier");return null;}
 }

@@ -11,6 +11,6 @@ public class LlvmAssign extends LlvmValue{
     }
     
     public String toString(){
-		return name.toString();
+		return name + " = " + exp;
     }
 }
