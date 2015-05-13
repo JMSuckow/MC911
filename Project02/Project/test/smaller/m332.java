@@ -1,4 +1,4 @@
-// testando new object 
+// testando new object - (OK)
 class m332
 {
    public static void main(String[] args)

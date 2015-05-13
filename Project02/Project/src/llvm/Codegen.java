@@ -52,6 +52,7 @@ public class Codegen extends VisitorAdapter{
 	
 	private SimpleClass currentClass;
 	private Method currentMethod;
+	private int labelNumber;
 
 
 	public Codegen(){
@@ -157,9 +158,10 @@ public class Codegen extends VisitorAdapter{
 		System.out.println("If");
 		LlvmValue b = n.condition.accept(this);
 		
-		LlvmLabel thenClause = new LlvmLabel(new LlvmLabelValue("then"));
-		LlvmLabel elseClause = new LlvmLabel(new LlvmLabelValue("else"));
-		LlvmLabel endClause = new LlvmLabel(new LlvmLabelValue("end"));
+		LlvmLabel thenClause = new LlvmLabel(new LlvmLabelValue("then"+labelNumber));
+		LlvmLabel elseClause = new LlvmLabel(new LlvmLabelValue("else"+labelNumber));
+		LlvmLabel endClause = new LlvmLabel(new LlvmLabelValue("end"+labelNumber));
+		labelNumber++;
 		
 		assembler.add(new LlvmBranch(b,thenClause.label,elseClause.label));
 		
@@ -314,7 +316,6 @@ public class Codegen extends VisitorAdapter{
 		
 		LlvmValue returnType = n.returnType.accept(this);
 		LlvmValue name = n.name.accept(this);
-		LlvmValue returnExp = n.returnExp.accept(this);
 		
 		List<LlvmValue> formals = new ArrayList<LlvmValue>();
 		formals.add(new LlvmString("this","%class."+currentClass.name+"* "));
@@ -355,6 +356,7 @@ public class Codegen extends VisitorAdapter{
 		
 		
 		//Return
+		LlvmValue returnExp = n.returnExp.accept(this);
 		
 		if(!(returnExp.type.toString().equals(currentMethod.getReturnType().toString()))){
 			LlvmRegister reg = new LlvmRegister(currentMethod.getReturnType());
@@ -410,8 +412,29 @@ public class Codegen extends VisitorAdapter{
 			}
 		}
 		else if(v.place == Variable.Place.GLOBAL){
-			reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",new LlvmPointer(v.type));
-			assembler.add(new LlvmLoad(reg,exp));
+			
+			LlvmRegister variablePtr;
+			if(v.type instanceof LlvmCustomType && ((LlvmCustomType) v.type).custom == LlvmCustomType.CustomType.CUSTOM_CLASS){
+				variablePtr = new LlvmRegister(new LlvmString("%class."+currentClass.name+"* * ").type);
+			}else
+				variablePtr = new LlvmRegister(new LlvmPointer(v.type));
+				
+			List<LlvmValue> offsets = this.symTab.getOffsets(currentClass,v);
+			
+			LlvmRegister thisReg = new LlvmRegister("%this", new LlvmString("%class."+currentClass.name+"* ").type);
+			
+			assembler.add(new LlvmGetElementPointer(variablePtr, thisReg, offsets));
+		
+			if(v.type instanceof LlvmCustomType && ((LlvmCustomType) v.type).custom == LlvmCustomType.CustomType.CUSTOM_CLASS){
+				reg = new LlvmRegister(new LlvmString("%class."+currentClass.name+"* ").type);
+			}else
+				reg = new LlvmRegister(v.type);
+				
+			assembler.add(new LlvmStore(exp, variablePtr));
+			assembler.add(new LlvmLoad(reg, variablePtr));
+		
+			/*reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",new LlvmPointer(v.type));
+			assembler.add(new LlvmLoad(reg,exp));*/
 		}
 		
 		
@@ -442,7 +465,7 @@ public class Codegen extends VisitorAdapter{
 	public LlvmValue visit(IntArrayType n){
 		System.out.println("IntArrayType");
 		
-		return new LlvmString(LlvmPrimitiveType.I32P);
+		return new LlvmString(new LlvmPointer(LlvmCustomType.ARRAY));
 	}
 	
 	public LlvmValue visit(BooleanType n){
@@ -480,6 +503,19 @@ public class Codegen extends VisitorAdapter{
 		}
 		else if(v.place == Variable.Place.GLOBAL){
 			//reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",v.type);
+			LlvmRegister variablePtr = new LlvmRegister(new LlvmPointer(v.type));
+			List<LlvmValue> offsets = this.symTab.getOffsets(currentClass,v);
+			
+			LlvmRegister thisReg = new LlvmRegister("%this", new LlvmString("%class."+currentClass.name+"* ").type);
+			
+			assembler.add(new LlvmGetElementPointer(variablePtr, thisReg, offsets));
+		
+			if(v.type instanceof LlvmCustomType && ((LlvmCustomType) v.type).custom == LlvmCustomType.CustomType.CUSTOM_CLASS)
+				reg = new LlvmRegister(new LlvmString("%class."+currentClass.name+"* ").type);
+			else
+				reg = new LlvmRegister(v.type);
+			assembler.add(new LlvmLoad(reg, variablePtr));
+			
 		}
 		
 		return reg;
@@ -527,9 +563,6 @@ public class Codegen extends VisitorAdapter{
 			
 			retValue = new LlvmRegister(this.symTab.getMethod(className,n.method.s).getReturnType());
 			assembler.add(new LlvmCall(retValue, retValue.type, "@_"+method+"__"+ className, actuals));			
-		}else{
-			
-			new LlvmRegister(LlvmPrimitiveType.I32);
 		}
 
 		return retValue;
@@ -707,6 +740,23 @@ class SymTab extends VisitorAdapter{
 		return null;	
 	}
 	
+	public List<LlvmValue> getOffsets(SimpleClass currentClass, Variable v){
+		
+		List<LlvmValue> offsets = new ArrayList<LlvmValue>();
+		offsets.add(new LlvmIntegerLiteral(0));
+		
+		for(int i =0; i< currentClass.variables.size(); i++){
+		
+			if(currentClass.variables.get(i) == v){
+				offsets.add(new LlvmIntegerLiteral(i));
+			}
+		
+		}
+		
+		return offsets;
+		
+	} 
+	
 	public String findClassName(String regType){
 		if(regType.charAt(0) == '%')
 			return regType.substring(7,Math.min(regType.indexOf(' '),regType.indexOf('*')));
@@ -804,7 +854,7 @@ class SymTab extends VisitorAdapter{
 		public LlvmValue visit(IntArrayType n){
 			System.out.println("ST-IntArrayType");
 			
-			return new LlvmString(new LlvmPointer(LlvmPrimitiveType.I32));
+			return new LlvmString(new LlvmPointer(LlvmCustomType.ARRAY));
 		}
 		
 		public LlvmValue visit(BooleanType n){

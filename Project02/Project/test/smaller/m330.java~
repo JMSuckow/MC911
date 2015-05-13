@@ -1,14 +1,14 @@
-// testando new array 
+// testando new array - (OK)
 class m330
 {
    public static void main(String[] args)
    {
-      System.out.println(0);
+      System.out.println(new a().i());
    }
 }
 
 class a
 {
-   int[] i;
-   public int i(){i = new int[10]; return 0;}
+   int i;
+   public int i(){i = 10; return i;}
 }
