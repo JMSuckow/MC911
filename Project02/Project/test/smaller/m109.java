@@ -1,4 +1,4 @@
-// atributo e parametro com mesmo nome
+// atributo e parametro com mesmo nome - (OK)
 class m109
 {
     public static void main(String[] args)

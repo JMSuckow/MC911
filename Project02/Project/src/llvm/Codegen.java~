@@ -40,6 +40,7 @@ import syntaxtree.*;
 import llvmast.*;
 
 import java.util.*;
+import java.lang.Math;
 
 public class Codegen extends VisitorAdapter{
 	private List<LlvmInstruction> assembler;
@@ -49,8 +50,8 @@ public class Codegen extends VisitorAdapter{
 	//private ClassNode classEnv; 	// Aponta para a classe atualmente em uso em symTab
 	//private MethodNode methodEnv; 	// Aponta para a metodo atualmente em uso em symTab
 	
-	private ClassDecl currentClass;
-	private MethodDecl currentMethod;
+	private SimpleClass currentClass;
+	private Method currentMethod;
 
 
 	public Codegen(){
@@ -75,7 +76,7 @@ public class Codegen extends VisitorAdapter{
 
 		// NOTA: sempre que X.accept(Y), então Y.visit(X);
 		// NOTA: Logo, o comando abaixo irá chamar codeGenerator.visit(Program), linha 75
-		//p.accept(codeGenerator);
+		p.accept(codeGenerator);
 
 		// Link do printf
 		List<LlvmType> pts = new LinkedList<LlvmType>();
@@ -97,7 +98,7 @@ public class Codegen extends VisitorAdapter{
 		n.mainClass.accept(this);
 
 		for (util.List<ClassDecl> c = n.classList; c != null; c = c.tail){
-			currentClass = c.head;
+			currentClass = this.symTab.nextClass();
 			c.head.accept(this);
 		}
 
@@ -198,6 +199,15 @@ public class Codegen extends VisitorAdapter{
 		assembler.add(new LlvmIcmp(lhs,Condition.slt,LlvmPrimitiveType.I32,v1,v2));
 		return lhs;
 	}
+	
+	public LlvmValue visit(Equal n){
+		System.out.println("Equal");
+		LlvmValue v1 = n.lhs.accept(this);
+		LlvmValue v2 = n.rhs.accept(this);
+		LlvmRegister lhs = new LlvmRegister(LlvmPrimitiveType.I1);
+		assembler.add(new LlvmIcmp(lhs,Condition.eq,LlvmPrimitiveType.I32,v1,v2));
+		return lhs;
+	}
 
 	public LlvmValue visit(And n){
 		System.out.println("And");
@@ -269,7 +279,7 @@ public class Codegen extends VisitorAdapter{
 		String s = "";
 		for(int i =0; i<varList.size(); i++){
 			LlvmVariable v = (LlvmVariable) varList.get(i);
-			if(v.type == LlvmCustomType.CUSTOM_CLASS)
+			if(v.type instanceof LlvmCustomType && ((LlvmCustomType)v.type).custom == LlvmCustomType.CustomType.CUSTOM_CLASS)
 				s = s + "%class."+v.type+"*";
 			else
 				s = s + v.type;
@@ -282,13 +292,10 @@ public class Codegen extends VisitorAdapter{
 		
 		List<LlvmValue> methodList = new ArrayList<LlvmValue>();
 		for (util.List<MethodDecl> c = n.methodList; c != null; c = c.tail){
-			currentMethod = c.head;
+			currentMethod = currentClass.nextMethod();
 			methodList.add(c.head.accept(this));
 		}
 		currentMethod = null;
-		
-		
-		//assembler.add(new LlvmClassDecl(name,varList,methodList));
 
 		return name;
 	}
@@ -340,8 +347,6 @@ public class Codegen extends VisitorAdapter{
 			assembler.add(new LlvmAlloca(reg, locals.get(i).type, new ArrayList<LlvmValue>()));
 		}
 		
-		
-		
 		//Body
 		List<LlvmValue> body = new ArrayList<LlvmValue>();
 		for (util.List<Statement> c = n.body; c != null; c = c.tail){
@@ -351,13 +356,19 @@ public class Codegen extends VisitorAdapter{
 		
 		//Return
 		
-		//System.out.println(returnExp);
-		
-		assembler.add(new LlvmRet(returnExp));
+		if(!(returnExp.type.toString().equals(currentMethod.getReturnType().toString()))){
+			System.out.println(returnExp.type.toString()+"vs"+currentMethod.getReturnType()+".");
+			LlvmRegister reg = new LlvmRegister(currentMethod.getReturnType());
+			assembler.add(new LlvmLoad(reg,returnExp));
+			assembler.add(new LlvmRet(reg));
+		}else{
+			assembler.add(new LlvmRet(returnExp));
+		}
 		assembler.add(new LlvmCloseDefinition());
 
 		
-		
+		if(returnType.type instanceof LlvmCustomType)
+				((LlvmCustomType) returnType.type).setString("%class."+ returnType.type+"* ");
 		
 		
 		return new LlvmMethod(name,returnType,returnExp,formals,body,locals);
@@ -378,12 +389,38 @@ public class Codegen extends VisitorAdapter{
 		LlvmValue var = n.var.accept(this);
 		LlvmValue exp = n.exp.accept(this);
 		
-		//TODO: Search Map of variables registers
+		Variable v = this.symTab.getVariable(currentClass, currentMethod, n.var.s);
 		
-		LlvmRegister reg = new LlvmRegister(LlvmPrimitiveType.I32P);
+		LlvmRegister reg = null;
+		
+		if(v.place == Variable.Place.FORMAL || v.place == Variable.Place.LOCAL){
+			if(v.place == Variable.Place.FORMAL)
+				reg = new LlvmRegister("%" + v.name ,new LlvmPointer(v.type));
+			else
+				reg = new LlvmRegister("%" + currentClass.name + "_" + currentMethod.name + "_" + v.name + "_tmp",new LlvmPointer(v.type));
+			
+			if(!(exp instanceof LlvmRegister)){
+				LlvmRegister regExp = new LlvmRegister (new LlvmPointer(exp.type));
+				LlvmRegister regAux = new LlvmRegister(exp.type);
+				assembler.add(new LlvmAlloca(regExp, exp.type, new ArrayList<LlvmValue>()));
+				assembler.add(new LlvmStore(exp, regExp));
+				assembler.add(new LlvmLoad(regAux,regExp));
+				assembler.add(new LlvmStore(regAux, reg));
+			}else{			
+				assembler.add(new LlvmStore(exp,reg));
+			}
+		}
+		else if(v.place == Variable.Place.GLOBAL){
+			reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",new LlvmPointer(v.type));
+			assembler.add(new LlvmLoad(reg,exp));
+		}
 		
 		
-		if(!(exp instanceof LlvmRegister)){
+		
+		//LlvmRegister reg = new LlvmRegister(v.type);
+		
+		
+		/*if(!(exp instanceof LlvmRegister)){
 			LlvmRegister reg2 = new LlvmRegister(LlvmPrimitiveType.I32P);
 			LlvmRegister regExp = new LlvmRegister(LlvmPrimitiveType.I32P);
 			assembler.add(new LlvmAlloca(regExp, LlvmPrimitiveType.I32, new ArrayList<LlvmValue>()));
@@ -391,7 +428,7 @@ public class Codegen extends VisitorAdapter{
 			assembler.add(new LlvmLoad(reg2, regExp));
 		}else{
 			assembler.add(new LlvmLoad(reg,exp));
-		}
+		}*/
 
 		return reg;
 	}
@@ -432,7 +469,21 @@ public class Codegen extends VisitorAdapter{
 		
 		LlvmValue name = n.name.accept(this);
 		
-		return name;
+		Variable v = this.symTab.getVariable(currentClass, currentMethod, n.name.s);
+		
+		LlvmRegister reg = null;
+		
+		if(v.place == Variable.Place.LOCAL){
+			reg = new LlvmRegister("%" + currentClass.name + "_" + currentMethod.name + "_" + v.name + "_tmp",new LlvmPointer(v.type));
+		}
+		else if(v.place == Variable.Place.FORMAL){
+			reg = new LlvmRegister("%" + v.name,new LlvmPointer(v.type));
+		}
+		else if(v.place == Variable.Place.GLOBAL){
+			//reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",v.type);
+		}
+		
+		return reg;
 	}
 	
 	public LlvmValue visit(ArrayLength n){
@@ -465,12 +516,23 @@ public class Codegen extends VisitorAdapter{
 			actuals.add(c.head.accept(this));
 		}
 		
-		//TODO: Get Method.returnType
-		
-		LlvmRegister retValue = new LlvmRegister(object.type);
-		assembler.add(new LlvmCall(retValue, retValue.type, "@_"+method+"__"/*+object.className*/, actuals));
-		
-		
+		LlvmRegister retValue = null;
+		if(object instanceof LlvmObject){
+			Method m = this.symTab.getMethod(((LlvmObject) object).className,n.method.s);
+			
+			retValue = new LlvmRegister(this.symTab.getMethod(((LlvmObject) object).className,n.method.s).getReturnType());
+			
+			assembler.add(new LlvmCall(retValue, retValue.type, "@_"+method+"__"+ ((LlvmObject) object).className, actuals));
+		}else if(object.type instanceof LlvmCustomType && ((LlvmCustomType)object.type).custom == LlvmCustomType.CustomType.CUSTOM_CLASS){
+			String className = this.symTab.findClassName(object.type.toString());
+			
+			retValue = new LlvmRegister(this.symTab.getMethod(className,n.method.s).getReturnType());
+			assembler.add(new LlvmCall(retValue, retValue.type, "@_"+method+"__"+ className, actuals));			
+		}else{
+			
+			new LlvmRegister(LlvmPrimitiveType.I32);
+		}
+
 		return retValue;
 	}
 	
@@ -479,11 +541,9 @@ public class Codegen extends VisitorAdapter{
 		
 		LlvmValue className = n.className.accept(this);
 		
-		//TODO: Size of classes
-		
-		//Calculate Array type size: 12
+		//Calculate Object type size
 		LlvmRegister sizeReg = new LlvmRegister(LlvmPrimitiveType.I32);
-		assembler.add(new LlvmTimes(sizeReg,LlvmPrimitiveType.I32,new LlvmIntegerLiteral(12),new LlvmIntegerLiteral(1)));
+		assembler.add(new LlvmTimes(sizeReg,LlvmPrimitiveType.I32,new LlvmIntegerLiteral(this.symTab.getClass(className.toString()).getSizeDeclaration()),new LlvmIntegerLiteral(1)));
 		//Malloc Obj type size
 		LlvmRegister objReg = new LlvmRegister(LlvmPrimitiveType.I8P);
 		List<LlvmValue> args = new ArrayList<LlvmValue>();
@@ -493,7 +553,7 @@ public class Codegen extends VisitorAdapter{
 		LlvmRegister obj = new LlvmRegister(new LlvmString("%class."+className+"* ").type);
 		assembler.add(new LlvmBitcast(obj, objReg, obj.type));
 		
-		return obj;
+		return new LlvmObject(n.className.s, obj);
 	}
 	
 	public LlvmValue visit(Print n){
@@ -556,7 +616,7 @@ public class Codegen extends VisitorAdapter{
 	public LlvmValue visit(ArrayAssign n){System.out.println("ArrayAssign");return null;}
 	//public LlvmValue visit(And n){return null;}
 	//public LlvmValue visit(LessThan n){return null;}
-	public LlvmValue visit(Equal n){System.out.println("Equal");return null;}
+	//public LlvmValue visit(Equal n){System.out.println("Equal");return null;}
 	//public LlvmValue visit(Minus n){return null;}
 	//public LlvmValue visit(Times n){return null;}
 	public LlvmValue visit(ArrayLookup n){System.out.println("ArrayLookup");return null;}
@@ -584,14 +644,75 @@ class SymTab extends VisitorAdapter{
     //public Map<String, ClassNode> classes;     
     //private ClassNode classEnv;    //aponta para a classe em uso
     public ArrayList<SimpleClass> classes;
+    private int currentClass;
 	
 	public SymTab(){
 		classes = new ArrayList<SimpleClass>();
+		currentClass = 0;
 	}
 	
     public LlvmValue FillTabSymbol(Program n){
 		n.accept(this);
 		return null;
+	}
+	
+	public SimpleClass getClass(String name){
+
+		for(SimpleClass sc : classes){
+			
+			if(sc.name.equals(name)){
+				return sc;
+			}
+		}
+		
+		return null;	
+	}
+	
+	public SimpleClass nextClass(){
+		return classes.get(++currentClass);
+	}
+	
+	public Method getMethod(String className, String method){
+
+		for(SimpleClass sc : classes){			
+			if(sc.name.equals(className)){
+				for(Method m : sc.methods){
+					if(m.name.equals(method)){
+						return m;
+					}
+				}
+			}
+		}
+		
+		return null;	
+	}
+	
+	public Variable getVariable(SimpleClass c, Method method, String varName){
+
+		for(Variable v : c.variables){
+			if(v.name.equals(varName))
+				return v;
+		}
+		
+		if(method != null){
+			for(Variable v : method.formals){
+				if(v.name.equals(varName))
+					return v;
+			}
+			for(Variable v : method.locals){
+				if(v.name.equals(varName))
+					return v;
+			}
+		}
+		
+		return null;	
+	}
+	
+	public String findClassName(String regType){
+		if(regType.charAt(0) == '%')
+			return regType.substring(7,Math.min(regType.indexOf(' '),regType.indexOf('*')));
+		else
+			return regType;
 	}
 	
 	public LlvmValue visit(Program n){
@@ -600,6 +721,7 @@ class SymTab extends VisitorAdapter{
 	
 		for (util.List<ClassDecl> c = n.classList; c != null; c = c.tail)
 			classes.add((SimpleClass)c.head.accept(this));
+
 	
 		return null;
 	}
@@ -618,12 +740,15 @@ class SymTab extends VisitorAdapter{
 			
 			List<Variable> varList = new ArrayList<Variable>();
 			for (util.List<VarDecl> c = n.varList; c != null; c = c.tail){
-				varList.add((Variable)c.head.accept(this));
+				Variable v = (Variable)c.head.accept(this);
+				v.place = Variable.Place.GLOBAL; 
+				varList.add(v);
 			}
 			
 			List<Method> methodList = new ArrayList<Method>();
 			for (util.List<MethodDecl> c = n.methodList; c != null; c = c.tail){
-				methodList.add((Method)c.head.accept(this));
+				Method m = (Method)c.head.accept(this);
+				methodList.add(m);
 			}
 	
 		return new SimpleClass(n.name.s, varList, methodList);
@@ -657,12 +782,21 @@ class SymTab extends VisitorAdapter{
 			
 			List<Variable> formals = new ArrayList<Variable>();
 			for (util.List<Formal> c = n.formals; c != null; c = c.tail){
-				formals.add((Variable)c.head.accept(this));
+				Variable v = (Variable)c.head.accept(this);
+				v.place = Variable.Place.FORMAL; 
+				formals.add(v);
 			}
 			
 			List<Variable> locals = new ArrayList<Variable>();
 			for (util.List<VarDecl> c = n.locals; c != null; c = c.tail){
-				locals.add((Variable)c.head.accept(this));	
+				Variable v = (Variable)c.head.accept(this);
+				v.place = Variable.Place.LOCAL; 
+				locals.add(v);	
+			}
+			
+			if(returnType.type instanceof LlvmCustomType){
+				((LlvmCustomType) returnType.type).setString("%class."+ returnType.type+"* ");
+				
 			}
 			
 			return new Method(returnType,n.name.s,formals,locals);
@@ -695,14 +829,16 @@ class SymTab extends VisitorAdapter{
 	
 class SimpleClass extends LlvmValue{
 	
-	String name;
-	List<Variable> variables;
-	List<Method> methods;
+	public String name;
+	public List<Variable> variables;
+	public List<Method> methods;
+	private int currentMethod;
 	
 	public SimpleClass(String name, List<Variable> variables, List<Method> methods){
 		this.name = name;
 		this.variables = variables;
 		this.methods = methods;
+		this.currentMethod = 0;
 	}
 	
 	public int getSizeDeclaration(){
@@ -710,8 +846,13 @@ class SimpleClass extends LlvmValue{
 		for(Variable v : this.variables){
 			totalSize += v.size;
 		}
-		
+	
 		return totalSize;
+	}
+	
+			
+	public Method nextMethod(){
+		return methods.get(currentMethod++);
 	}
 	
 }
@@ -721,10 +862,16 @@ class Variable extends LlvmValue{
 	public String name;
 	public int size;
 	
+	public enum Place{
+		GLOBAL, FORMAL, LOCAL;
+	}
+	
+	public Place place;
+	
     public Variable(String name, LlvmValue type){
     	this.name = name;
     	this.type = type.type;
-    	if(type.type == LlvmCustomType.CUSTOM_CLASS || type.type instanceof LlvmPointer){
+    	if((type.type instanceof LlvmCustomType && ((LlvmCustomType)type.type).custom == LlvmCustomType.CustomType.CUSTOM_CLASS) || type.type instanceof LlvmPointer){
     		size = 8;
     	}else if(type.type == LlvmPrimitiveType.I32){
     		size = 4;
@@ -737,16 +884,20 @@ class Variable extends LlvmValue{
 
 class Method extends LlvmValue{
 
-	LlvmType returnType;
-	String name;
-	List<Variable> formals;
-	List<Variable> locals;
+	private LlvmType returnType;
+	public String name;
+	public List<Variable> formals;
+	public List<Variable> locals;
 	
 	public Method(LlvmValue returnType, String name, List<Variable> formals, List<Variable> locals){
 		this.returnType = returnType.type;
-		this.name = name.toString();
+		this.name = name;
 		this.formals = formals;
 		this.locals = locals;
+	}
+	
+	public LlvmType getReturnType(){
+		return this.returnType;
 	}
 
 }
