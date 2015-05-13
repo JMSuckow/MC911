@@ -4,7 +4,7 @@ define i32 @main() {
 entry:
   %tmp0 = alloca i32
   store i32 0, i32 * %tmp0
-  %tmp1 = mul i32 4, 1
+  %tmp1 = mul i32 0, 1
   %tmp2 = call i8*  @malloc(i32 %tmp1)
   %tmp3 = bitcast i8* %tmp2 to %class.a* 
   %tmp4 = call i32  @_i__a(%class.a*  %tmp3)
@@ -13,15 +13,26 @@ entry:
   %tmp7 = load i32 * %tmp0
   ret i32 %tmp7
 }
-%class.a = type {i32}
+%class.a = type {}
+define %class.a*  @_A__a(%class.a*  %this) {
+entry_A__a:
+  ret %class.a*  %this
+}
 define i32 @_i__a(%class.a*  %this) {
 entry_i__a:
-  %tmp8 = getelementptr %class.a*  %this, i32 0, i32 0
-  %tmp9 = load i32 * %tmp8
-  store i32 10, i32 %tmp9
-  %tmp10 = getelementptr %class.a*  %this, i32 0, i32 0
-  %tmp11 = load i32 * %tmp10
-  ret i32 %tmp11
+  %a_i_i_tmp = alloca %type.Array *
+  %tmp8 = mul i32 12, 1
+  %tmp9 = call i8*  @malloc(i32 %tmp8)
+  %tmp10 = bitcast i8* %tmp9 to %type.Array*
+  %tmp11 = getelementptr %type.Array* %tmp10, i32 0, i32 0
+  store i32 10, i32* %tmp11
+  %tmp12 = alloca i32, i32 10
+  %tmp13 = getelementptr %type.Array* %tmp10, i32 0, i32 1
+  store i32* %tmp12, i32** %tmp13
+  %tmp14 = getelementptr %type.Array * %tmp10, i32 0, i32 1
+  %tmp15 = getelementptr i32 ** %tmp14, i32 1
+  %tmp16 = load i32* %tmp15
+  ret i32 %tmp16
 }
 declare i32 @printf (i8 *, ...)
 declare i8 * @malloc (i32)

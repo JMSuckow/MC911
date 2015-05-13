@@ -432,25 +432,8 @@ public class Codegen extends VisitorAdapter{
 				
 			assembler.add(new LlvmStore(exp, variablePtr));
 			assembler.add(new LlvmLoad(reg, variablePtr));
-		
-			/*reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",new LlvmPointer(v.type));
-			assembler.add(new LlvmLoad(reg,exp));*/
+
 		}
-		
-		
-		
-		//LlvmRegister reg = new LlvmRegister(v.type);
-		
-		
-		/*if(!(exp instanceof LlvmRegister)){
-			LlvmRegister reg2 = new LlvmRegister(LlvmPrimitiveType.I32P);
-			LlvmRegister regExp = new LlvmRegister(LlvmPrimitiveType.I32P);
-			assembler.add(new LlvmAlloca(regExp, LlvmPrimitiveType.I32, new ArrayList<LlvmValue>()));
-			assembler.add(new LlvmStore(exp, regExp));
-			assembler.add(new LlvmLoad(reg2, regExp));
-		}else{
-			assembler.add(new LlvmLoad(reg,exp));
-		}*/
 
 		return reg;
 	}
@@ -502,7 +485,6 @@ public class Codegen extends VisitorAdapter{
 			reg = new LlvmRegister("%" + v.name,new LlvmPointer(v.type));
 		}
 		else if(v.place == Variable.Place.GLOBAL){
-			//reg = new LlvmRegister("%" + currentClass.name + "_" + v.name + "_tmp",v.type);
 			LlvmRegister variablePtr = new LlvmRegister(new LlvmPointer(v.type));
 			List<LlvmValue> offsets = this.symTab.getOffsets(currentClass,v);
 			
@@ -537,6 +519,37 @@ public class Codegen extends VisitorAdapter{
 		
 		
 		return size;
+	}
+	
+	//FIXME: Doesn't Work!
+	public LlvmValue visit(ArrayLookup n){
+		System.out.println("ArrayLookup");
+		
+		LlvmValue array = n.array.accept(this);
+		LlvmValue index = n.index.accept(this);
+		
+		LlvmRegister valuePtr = new LlvmRegister(LlvmPrimitiveType.I32PP);
+		List<LlvmValue> offsets = new ArrayList<LlvmValue>();
+		offsets.add(new LlvmIntegerLiteral(0));
+		offsets.add(new LlvmIntegerLiteral(1));
+		offsets.add(index);
+		assembler.add(new LlvmGetElementPointer(valuePtr, array, offsets));
+		
+		LlvmRegister value = new LlvmRegister(LlvmPrimitiveType.I32);
+		assembler.add(new LlvmLoad(value, valuePtr));
+		
+		return value;
+	}
+	
+	//TODO
+	public LlvmValue visit(ArrayAssign n){
+		System.out.println("ArrayAssign");
+		
+		LlvmValue var = n.var.accept(this);
+		LlvmValue index = n.index.accept(this);
+		LlvmValue value = n.value.accept(this);
+		
+		return null;
 	}
 	
 	public LlvmValue visit(Call n){
@@ -631,6 +644,45 @@ public class Codegen extends VisitorAdapter{
 		return thisReg;
 	}
 	
+	public LlvmValue visit(While n){
+		System.out.println("While");
+		
+		LlvmLabel beginClause = new LlvmLabel(new LlvmLabelValue("begin"+labelNumber));
+		assembler.add(new LlvmBranch(beginClause.label));
+		assembler.add(beginClause);
+		
+		LlvmValue condition = n.condition.accept(this);
+		
+		LlvmLabel trueClause = new LlvmLabel(new LlvmLabelValue("true"+labelNumber));
+		LlvmLabel endClause = new LlvmLabel(new LlvmLabelValue("end"+labelNumber));
+		labelNumber++;
+		
+		assembler.add(new LlvmBranch(condition,trueClause.label,endClause.label));
+		
+		assembler.add(trueClause);
+		
+		LlvmValue body = n.body.accept(this);
+		
+		assembler.add(new LlvmBranch(beginClause.label));
+		
+		assembler.add(endClause);
+		
+		
+		
+		return null;
+	}
+	
+	public LlvmValue visit(Block n){
+		System.out.println("Block");
+		
+		List<LlvmValue> body = new ArrayList<LlvmValue>();
+		for (util.List<Statement> c = n.body; c != null; c = c.tail){
+			body.add(c.head.accept(this));
+		}
+		
+		return null;
+	}
+	
 	// Todos os visit's que devem ser implementados	
 	//public LlvmValue visit(ClassDeclSimple n){System.out.println("ClassDeclSimple");return null;}
 	public LlvmValue visit(ClassDeclExtends n){System.out.println("ClassDeclExtends");return null;}
@@ -641,17 +693,17 @@ public class Codegen extends VisitorAdapter{
 	//public LlvmValue visit(BooleanType n){System.out.println("BooleanType");return null;}
 	//public LlvmValue visit(IntegerType n){System.out.println("IntegerType");return null;}
 	//public LlvmValue visit(IdentifierType n){System.out.println("IdentifierType");return null;}
-	public LlvmValue visit(Block n){System.out.println("Block");return null;}
+	//public LlvmValue visit(Block n){System.out.println("Block");return null;}
 	//public LlvmValue visit(If n){return null;}
-	public LlvmValue visit(While n){System.out.println("While");return null;}
+	//public LlvmValue visit(While n){System.out.println("While");return null;}
 	//public LlvmValue visit(Assign n){System.out.println("Assign");return null;}
-	public LlvmValue visit(ArrayAssign n){System.out.println("ArrayAssign");return null;}
+	//public LlvmValue visit(ArrayAssign n){System.out.println("ArrayAssign");return null;}
 	//public LlvmValue visit(And n){return null;}
 	//public LlvmValue visit(LessThan n){return null;}
 	//public LlvmValue visit(Equal n){System.out.println("Equal");return null;}
 	//public LlvmValue visit(Minus n){return null;}
 	//public LlvmValue visit(Times n){return null;}
-	public LlvmValue visit(ArrayLookup n){System.out.println("ArrayLookup");return null;}
+	//public LlvmValue visit(ArrayLookup n){System.out.println("ArrayLookup");return null;}
 	//public LlvmValue visit(ArrayLength n){System.out.println("ArrayLength");return null;}
 	//public LlvmValue visit(Call n){System.out.println("Call");return null;}
 	//public LlvmValue visit(True n){return null;}

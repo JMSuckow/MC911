@@ -70,10 +70,10 @@ class BBS{
 	}
 	return 0 ;
     }
-    
+    */
     // Initialize array of integers
     public int Init(int sz){
-	size = sz ;
+	/*size = sz ;
 	number = new int[sz] ;
 	
 	number[0] = 20 ;
@@ -85,9 +85,9 @@ class BBS{
 	number[6] = 6  ; 
 	number[7] = 9  ; 
 	number[8] = 19 ; 
-	number[9] = 5  ;
+	number[9] = 5  ;*/
 	
 	return 0 ;	
     }
-*/
+
 }
